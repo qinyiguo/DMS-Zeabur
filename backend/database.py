@@ -11,11 +11,11 @@ DATABASE_URL = os.getenv("POSTGRES_CONNECTION_STRING") or os.getenv("DATABASE_UR
 
 # 如果還是沒有，從個別環境變數組合
 if not DATABASE_URL:
-    db_user = os.getenv("POSTGRES_USER", "root")
-    db_password = os.getenv("POSTGRES_PASSWORD", "ny019wg3teEI4doKcOh5Puip6q2X8WY7")
-    db_host = os.getenv("POSTGRES_HOST", "service-69450a06822b877eab06d38b")
+    db_user = os.getenv("POSTGRES_USER")
+    db_password = os.getenv("POSTGRES_PASSWORD")
+    db_host = os.getenv("POSTGRES_HOST")
     db_port = os.getenv("POSTGRES_PORT", "5432")
-    db_name = os.getenv("POSTGRES_DB", "zeabur")
+    db_name = os.getenv("POSTGRES_DB")
     
     # 只有在所有必要變數都存在時才組合
     if all([db_user, db_password, db_host, db_name]):
