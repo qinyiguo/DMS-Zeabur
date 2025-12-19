@@ -20,7 +20,7 @@ if not DATABASE_URL:
     DATABASE_URL = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 # 如果是 postgres:// 格式，轉換為 postgresql://
-if DATABASE_URL.startswith("postgres://"):
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):  # ✅ 加上 DATABASE_URL and
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 engine = create_engine(DATABASE_URL)
