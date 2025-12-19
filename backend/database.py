@@ -7,12 +7,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 優先使用 DATABASE_URL（Zeabur 自動注入）
-DATABASE_URL = os.getenv("POSTGRES_CONNECTION_STRING=postgresql://root:ny019wg3teEI4doKcOh5Puip6q2X8WY7@service-69450a06822b877eab06d38b:5432/zeabur")
+DATABASE_URL = os.getenv("POSTGRES_CONNECTION_STRING") or os.getenv("DATABASE_URL")
 
 # 如果沒有 DATABASE_URL，從個別環境變數組合
 if not DATABASE_URL:
-    db_user = os.getenv("POSTGRES_USER", "postgres")
-    db_password = os.getenv("POSTGRES_PASSWORD", "postgres123")
+    db_user = os.getenv("POSTGRES_USER", "root")
+    db_password = os.getenv("POSTGRES_PASSWORD", "ny019wg3teEI4doKcOh5Puip6q2X8WY7")
     db_host = os.getenv("POSTGRES_HOST", "postgresql")
     db_port = os.getenv("POSTGRES_PORT", "5432")
     db_name = os.getenv("POSTGRES_DB", "factory_performance")
