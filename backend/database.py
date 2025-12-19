@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 優先使用 DATABASE_URL（Zeabur 自動注入）
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("postgresql://postgres:postgres123@postgresql.zeabur.internal:5432/factory_performance
+")
 
 # 如果沒有 DATABASE_URL，從個別環境變數組合
 if not DATABASE_URL:
