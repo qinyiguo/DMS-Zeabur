@@ -12,7 +12,7 @@ DATABASE_URL = os.getenv("postgresql://postgres:postgres123@postgresql:5432/fact
 # 如果沒有 DATABASE_URL，從個別環境變數組合
 if not DATABASE_URL:
     db_user = os.getenv("POSTGRES_USER", "postgres")
-    db_password = os.getenv("POSTGRES_PASSWORD", "1qaz@WSX")
+    db_password = os.getenv("POSTGRES_PASSWORD", "postgres123")
     db_host = os.getenv("POSTGRES_HOST", "postgresql")
     db_port = os.getenv("POSTGRES_PORT", "5432")
     db_name = os.getenv("POSTGRES_DB", "factory_performance")
