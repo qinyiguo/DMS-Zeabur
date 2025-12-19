@@ -25,7 +25,7 @@ app.include_router(performance.router, prefix="/api/performance", tags=["業績"
 
 @app.get("/")
 def read_root():
-    return {"message廠業績管理系統 API", "status": "running"}
+    return {"message": "廠業績管理系統 API", "status": "running"}  
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
