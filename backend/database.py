@@ -6,11 +6,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# 從環境變數讀取資料庫連接資訊
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:password@localhost:5432/factory_performance"
-)
+# 方案 1：優先使用 DATABASE_URL（Zeabur 自動注入）
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+# 方案 2：如果沒有 DATABASE_URL，則從個別環境變數組合
+if not DATABASE_URL:
+    db_user = os.getenv("POSTGRES_USER", "postgres")
+    db_password = os.getenv("POSTGRES_PASSWORD", "password")
+    db_host = os.getenv("POSTGRES_HOST", "localhost")
+    db_port = os.getenv("POSTGRES_PORT", "5432")
+    db_name = os.getenv("POSTGRES_DB", "factory_performance")
+    
+    DATABASE_URL = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 # 如果是 Zeabur 的 PostgreSQL，可能需要調整連接字串
 if DATABASE_URL.startswith("postgres://"):
@@ -28,4 +35,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
