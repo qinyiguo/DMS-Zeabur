@@ -13,7 +13,7 @@ class ExcelParser:
         """讀取 Excel 檔案"""
         try:
             # 支援 .xlsx 和 .xls 格式
-            df = pd.read_excel(BytesIO(file_content), sheet_name=sheet_name or )
+            df = pd.read_excel(BytesIO(file_content), sheet_name=sheet_name or 0 )
             return df
         except Exception as e:
             logger.error(f"讀取 Excel 檔案失敗: {str(e)}")
