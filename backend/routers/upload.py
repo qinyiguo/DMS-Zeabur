@@ -4,6 +4,7 @@ from typing import List
 from database import get_db
 import crud
 import schemas
+import models
 from utils.excel_parser import ExcelParser
 from utils.factory_detector import (
     detect_factory_from_filename, 
@@ -14,6 +15,7 @@ from utils.factory_detector import (
 )
 from utils.file_hasher import calculate_file_hash
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -141,15 +143,15 @@ async def process_single_factory(
     
     try:
         if file_type == "零件出貨":
-            record_count = await process_part_shipment(factory_df, factory_code, db)
+            record_count = await process_part_shipment(factory_df, factory_code, file_hash, db)
         elif file_type == "零件銷售":
-            record_count = await process_part_sales(factory_df, factory_code, db)
+            record_count = await process_part_sales(factory_df, factory_code, file_hash, db)
         elif file_type == "Shelf Life Code":
             record_count = await process_shelf_life(factory_df, db)
         elif file_type == "技師績效":
-            record_count = await process_technician_performance(factory_df, factory_code, db)
+            record_count = await process_technician_performance(factory_df, factory_code, file_hash, db)
         elif file_type == "維修收入":
-            record_count = await process_maintenance_income(factory_df, factory_code, db)
+            record_count = await process_maintenance_income(factory_df, factory_code, file_hash, db)
         else:
             logger.warning(f"未知的報表類型: {file_type}")
             record_count = 0
@@ -175,14 +177,14 @@ async def process_single_factory(
     return file_upload
 
 
-async def process_part_shipment(df, factory_code: str, db: Session) -> int:
+async def process_part_shipment(df, factory_code: str, file_hash: str, db: Session) -> int:
     """處理零件出貨資料"""
     logger.info(f"開始處理零件出貨資料，廠別: {factory_code}")
     
     parser = ExcelParser()
     records = parser.parse_part_shipment(df, factory_code)
     
-    count = 0
+    shipments = []
     for record in records:
         try:
             # 獲取或創建工單
@@ -195,32 +197,38 @@ async def process_part_shipment(df, factory_code: str, db: Session) -> int:
                 db, record['part_number']
             )
             
-            # 創建零件出貨記錄
-            crud.create_part_shipment(
-                db,
+            # 創建零件出貨模型對象
+            shipment = models.PartShipment(
+                factory_code=factory_code,
+                order_number=record['order_number'],
                 work_order_id=work_order.id,
-                part_category_id=part_category.id,
+                part_number=record['part_number'],
                 quantity=record['quantity'],
                 amount=record['amount'],
-                shipment_date=record.get('shipment_date')
+                shipment_date=record.get('shipment_date'),
+                file_upload_id=file_hash
             )
-            count += 1
+            shipments.append(shipment)
         except Exception as e:
             logger.error(f"處理零件出貨記錄時出錯: {str(e)}")
             continue
     
-    logger.info(f"零件出貨資料處理完成，共 {count} 筆")
-    return count
+    # 批量插入
+    if shipments:
+        crud.bulk_insert_part_shipments(db, shipments)
+    
+    logger.info(f"零件出貨資料處理完成，共 {len(shipments)} 筆")
+    return len(shipments)
 
 
-async def process_part_sales(df, factory_code: str, db: Session) -> int:
+async def process_part_sales(df, factory_code: str, file_hash: str, db: Session) -> int:
     """處理零件銷售資料"""
     logger.info(f"開始處理零件銷售資料，廠別: {factory_code}")
     
     parser = ExcelParser()
     records = parser.parse_part_sales(df, factory_code)
     
-    count = 0
+    sales = []
     for record in records:
         try:
             # 獲取或創建工單
@@ -233,22 +241,28 @@ async def process_part_sales(df, factory_code: str, db: Session) -> int:
                 db, record['part_number']
             )
             
-            # 創建零件銷售記錄
-            crud.create_part_sale(
-                db,
+            # 創建零件銷售模型對象
+            sale = models.PartSale(
+                factory_code=factory_code,
+                order_number=record['order_number'],
                 work_order_id=work_order.id,
-                part_category_id=part_category.id,
+                part_number=record['part_number'],
                 quantity=record['quantity'],
                 amount=record['amount'],
-                sale_date=record.get('sale_date')
+                sale_date=record.get('sale_date'),
+                file_upload_id=file_hash
             )
-            count += 1
+            sales.append(sale)
         except Exception as e:
             logger.error(f"處理零件銷售記錄時出錯: {str(e)}")
             continue
     
-    logger.info(f"零件銷售資料處理完成，共 {count} 筆")
-    return count
+    # 批量插入
+    if sales:
+        crud.bulk_insert_part_sales(db, sales)
+    
+    logger.info(f"零件銷售資料處理完成，共 {len(sales)} 筆")
+    return len(sales)
 
 
 async def process_shelf_life(df, db: Session) -> int:
@@ -261,9 +275,10 @@ async def process_shelf_life(df, db: Session) -> int:
     count = 0
     for record in records:
         try:
-            crud.update_part_shelf_life(
+            crud.update_part_category_from_shelf_life(
                 db,
                 part_number=record['part_number'],
+                category="",
                 shelf_life_code=record['shelf_life_code']
             )
             count += 1
@@ -275,14 +290,14 @@ async def process_shelf_life(df, db: Session) -> int:
     return count
 
 
-async def process_technician_performance(df, factory_code: str, db: Session) -> int:
+async def process_technician_performance(df, factory_code: str, file_hash: str, db: Session) -> int:
     """處理技師績效資料"""
     logger.info(f"開始處理技師績效資料，廠別: {factory_code}")
     
     parser = ExcelParser()
     records = parser.parse_technician_performance(df, factory_code)
     
-    count = 0
+    performances = []
     for record in records:
         try:
             # 獲取或創建工單
@@ -290,32 +305,38 @@ async def process_technician_performance(df, factory_code: str, db: Session) -> 
                 db, factory_code, record['order_number']
             )
             
-            # 創建技師績效記錄
-            crud.create_technician_performance(
-                db,
+            # 創建技師績效模型對象
+            performance = models.TechnicianPerformance(
+                factory_code=factory_code,
+                order_number=record['order_number'],
                 work_order_id=work_order.id,
                 technician_name=record['technician_name'],
                 hours=record['hours'],
                 hourly_rate=record['hourly_rate'],
-                bonus=record.get('bonus', 0)
+                bonus=record.get('bonus', 0),
+                file_upload_id=file_hash
             )
-            count += 1
+            performances.append(performance)
         except Exception as e:
             logger.error(f"處理技師績效記錄時出錯: {str(e)}")
             continue
     
-    logger.info(f"技師績效資料處理完成，共 {count} 筆")
-    return count
+    # 批量插入
+    if performances:
+        crud.bulk_insert_technician_performance(db, performances)
+    
+    logger.info(f"技師績效資料處理完成，共 {len(performances)} 筆")
+    return len(performances)
 
 
-async def process_maintenance_income(df, factory_code: str, db: Session) -> int:
+async def process_maintenance_income(df, factory_code: str, file_hash: str, db: Session) -> int:
     """處理維修收入資料"""
     logger.info(f"開始處理維修收入資料，廠別: {factory_code}")
     
     parser = ExcelParser()
     records = parser.parse_maintenance_income(df, factory_code)
     
-    count = 0
+    incomes = []
     for record in records:
         try:
             # 獲取或創建工單
@@ -323,18 +344,24 @@ async def process_maintenance_income(df, factory_code: str, db: Session) -> int:
                 db, factory_code, record['order_number']
             )
             
-            # 創建維修收入記錄
-            crud.create_maintenance_income(
-                db,
+            # 創建維修收入模型對象
+            income = models.MaintenanceIncome(
+                factory_code=factory_code,
+                order_number=record['order_number'],
                 work_order_id=work_order.id,
                 category=record['category'],
                 amount=record['amount'],
-                income_date=record.get('income_date')
+                income_date=record.get('income_date'),
+                file_upload_id=file_hash
             )
-            count += 1
+            incomes.append(income)
         except Exception as e:
             logger.error(f"處理維修收入記錄時出錯: {str(e)}")
             continue
     
-    logger.info(f"維修收入資料處理完成，共 {count} 筆")
-    return count
+    # 批量插入
+    if incomes:
+        crud.bulk_insert_maintenance_income(db, incomes)
+    
+    logger.info(f"維修收入資料處理完成，共 {len(incomes)} 筆")
+    return len(incomes)
