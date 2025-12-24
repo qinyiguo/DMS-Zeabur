@@ -82,6 +82,7 @@ class TechnicianPerformance(Base):
     id = Column(Integer, primary_key=True, index=True)
     factory_code = Column(String(10), nullable=False)
     order_number = Column(String(50))
+    work_order_id = Column(Integer, ForeignKey("work_orders.id"), nullable=False)
     technician_name = Column(String(100), nullable=False)
     work_hours = Column(Numeric(8, 2), default=0)
     salary = Column(Numeric(12, 2), default=0)
