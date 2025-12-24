@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 from routers import upload, reports, performance
 import uvicorn
+import os
 
 # 建立資料表
 Base.metadata.create_all(bind=engine)
@@ -28,4 +29,5 @@ def read_root():
     return {"message": "廠業績管理系統 API", "status": "running"}  
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", 8080))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
